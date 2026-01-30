@@ -1,0 +1,9 @@
+[package]
+name = "wp360-codesys-bridge-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+suppaftp = { version = "8.0.1", features = ["native-tls"] }
