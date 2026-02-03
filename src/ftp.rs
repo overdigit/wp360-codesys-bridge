@@ -4,8 +4,11 @@ use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use suppaftp::native_tls::{TlsConnector, TlsStream};
-use suppaftp::{FtpError, NativeTlsConnector, NativeTlsFtpStream};
+use suppaftp::FtpError;
+use std::sync::Arc;
+use suppaftp::{RustlsFtpStream, RustlsConnector};
+use suppaftp::rustls;
+use suppaftp::rustls::ClientConfig;
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "command")]
@@ -108,11 +111,22 @@ impl From<serde_json::Error> for OperationError<'_> {
 }
 
 pub fn init() -> Result<(), Box<dyn Error>> {
+    let root_store = rustls::RootCertStore::from_iter(
+        webpki_roots::TLS_SERVER_ROOTS
+            .iter()
+            .cloned(),
+    );
+
+    let config = ClientConfig::builder()
+        .with_root_certificates(root_store)
+        .with_no_client_auth();
+
+    
     let mut buf: String = "".to_string();
     std::io::stdin().read_line(&mut buf)?;
     let connection_params: Connection = serde_json::from_str(&buf)?;
 
-    let mut ftp_stream = NativeTlsFtpStream::connect(format!(
+    let mut ftp_stream = RustlsFtpStream::connect(format!(
         "{}:{}",
         connection_params.hostname, connection_params.port
     ))?;
@@ -120,13 +134,13 @@ pub fn init() -> Result<(), Box<dyn Error>> {
     if connection_params.tls {
         eprintln!("Activating FTPS");
         ftp_stream = ftp_stream.into_secure(
-            NativeTlsConnector::from(TlsConnector::new().unwrap()),
-            &connection_params.hostname,
+            RustlsConnector::from(Arc::new(config)),
+            &connection_params.hostname
         )?;
         eprintln!("FTPS activated");
     }
     ftp_stream.login(connection_params.username, connection_params.password)?;
-    ftp_stream.transfer_type(suppaftp::types::FileType::Binary);
+    ftp_stream.transfer_type(suppaftp::types::FileType::Binary)?;
 
     buf.clear();
     while let Ok(n) = std::io::stdin().read_line(&mut buf) {
@@ -150,22 +164,22 @@ pub fn init() -> Result<(), Box<dyn Error>> {
 fn get_ftp_error(e: OperationError) -> FtpResult {
     match e {
         OperationError::FtpError(e) => match e {
-            suppaftp::FtpError::ConnectionError(e) => {
+            suppaftp::FtpError::ConnectionError(_e) => {
                 todo!();
             },
             suppaftp::FtpError::UnexpectedResponse(r) => {
-                let Ok(response) = std::str::from_utf8(&r.body) else {
+                /*let Ok(response) = std::str::from_utf8(&r.body) else {
                     return FtpResult::Error {
                         success: false,
                         code: 1999,
                         error: "Invalid UTF-8 in server response",
                     };
-                };
-                return FtpResult::Error {
+                };*/
+                FtpResult::Error {
                     success: false,
                     code: 1000 + r.status.code(),
                     error: "Unexpected server response",
-                };
+                }
             },
             _ => todo!(),
         },
@@ -174,8 +188,8 @@ fn get_ftp_error(e: OperationError) -> FtpResult {
 }
 
 fn perform_operation<'a>(
-    ftp: &'a mut NativeTlsFtpStream,
-    buf: &'a String,
+    ftp: &'a mut RustlsFtpStream,
+    buf: &'a str,
 ) -> Result<FtpResult<'a>, OperationError<'a>> {
     let command: Command = serde_json::from_str(buf)?;
     match command {
@@ -230,7 +244,7 @@ fn perform_operation<'a>(
 
         Command::GetFileSize { remote } => {
             let size = ftp.size(remote)?;
-            return Ok(FtpResult::GetFileSize { size: size });
+            return Ok(FtpResult::GetFileSize { size });
         }
 
         Command::SetDirectory { remote } => {
@@ -239,7 +253,7 @@ fn perform_operation<'a>(
 
         Command::GetDirectory {} => {
             let path = ftp.pwd()?;
-            return Ok(FtpResult::GetDirectory { path: path });
+            return Ok(FtpResult::GetDirectory { path });
         }
 
         Command::CreateDirectory { remote } => {
@@ -254,8 +268,8 @@ fn perform_operation<'a>(
 }
 
 fn ftp_path(path: &Path) -> Result<PathBuf, std::io::Error> {
-    let BASE_PATH = Path::new("/home/nix/build/wp360-codesys-bridge-rs/");
-    let complete_path = BASE_PATH.join(path);
+    let base_path = Path::new("/home/nix/build/wp360-codesys-bridge-rs/");
+    let complete_path = base_path.join(path);
     let Some(parent) = complete_path.parent() else {
         return Err(std::io::Error::other("Invalid local path"));
     };
@@ -263,7 +277,7 @@ fn ftp_path(path: &Path) -> Result<PathBuf, std::io::Error> {
         return Err(std::io::Error::other("Invalid local path"));
     };
     let true_parent = parent.canonicalize()?;
-    if !true_parent.starts_with(BASE_PATH) {
+    if !true_parent.starts_with(base_path) {
         return Err(std::io::Error::other("Invalid local path"));
     }
     let true_path = parent.join(filename);
