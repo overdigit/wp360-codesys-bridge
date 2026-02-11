@@ -4,11 +4,11 @@ use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use suppaftp::FtpError;
 use std::sync::Arc;
-use suppaftp::{RustlsFtpStream, RustlsConnector};
+use suppaftp::FtpError;
 use suppaftp::rustls;
 use suppaftp::rustls::ClientConfig;
+use suppaftp::{RustlsConnector, RustlsFtpStream};
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "command")]
@@ -47,7 +47,7 @@ enum Command<'a> {
 
 #[derive(Serialize, Debug)]
 #[serde(untagged)]
-enum FtpResult<'a> {
+enum FtpResult {
     GetFileSize {
         size: usize,
     },
@@ -59,9 +59,93 @@ enum FtpResult<'a> {
     },
     Error {
         success: bool,
-        error: &'a str,
+        error: String,
         code: u32,
     },
+}
+
+impl From<OperationError> for FtpResult {
+    fn from(e: OperationError) -> Self {
+        match e {
+            OperationError::Ftp(e) => match e {
+                FtpError::ConnectionError(e) => e.into(),
+                FtpError::UnexpectedResponse(r) => FtpResult::Error {
+                    success: false,
+                    code: 1000 + r.status.code(),
+                    error: "Unexpected server response".to_string(),
+                },
+                FtpError::SecureError(s) => FtpResult::Error {
+                    success: false,
+                    code: 1001,
+                    error: s,
+                },
+                FtpError::BadResponse => FtpResult::Error {
+                    success: false,
+                    code: 1002,
+                    error: "Bad response".to_string(),
+                },
+                FtpError::InvalidAddress(_e) => {
+                    unreachable!()
+                }
+                FtpError::DataConnectionAlreadyOpen => FtpResult::Error {
+                    success: false,
+                    code: 1003,
+                    error: "Data connection already open".to_string(),
+                },
+            },
+            OperationError::Io(e) => e.into(),
+            OperationError::Serde(e) => e.into(),
+        }
+    }
+}
+
+impl From<std::io::Error> for FtpResult {
+    fn from(error: std::io::Error) -> Self {
+        match error.kind() {
+            std::io::ErrorKind::InvalidFilename => FtpResult::Error {
+                success: false,
+                code: 1004,
+                error: "Local path not in base folder".to_string(),
+            },
+            std::io::ErrorKind::InvalidInput => FtpResult::Error {
+                success: false,
+                code: 1005,
+                error: "Invalid local path".to_string(),
+            },
+            std::io::ErrorKind::InvalidData => FtpResult::Error {
+                success: false,
+                code: 1006,
+                error: "Invalid UTF-8 in remote path".to_string(),
+            },
+            _ => {
+                eprintln!("{:?}", error);
+                todo!()
+            }
+        }
+    }
+}
+
+impl From<serde_json::Error> for FtpResult {
+    fn from(error: serde_json::Error) -> Self {
+        match error.classify() {
+            serde_json::error::Category::Io => unreachable!(),
+            serde_json::error::Category::Syntax => FtpResult::Error {
+                success: false,
+                code: 1007,
+                error: "JSON syntax error".to_string(),
+            },
+            serde_json::error::Category::Data => FtpResult::Error {
+                success: false,
+                code: 1008,
+                error: "Invalid JSON command".to_string(),
+            },
+            serde_json::error::Category::Eof => FtpResult::Error {
+                success: false,
+                code: 1009,
+                error: "Unfinished JSON command".to_string(),
+            },
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -88,40 +172,35 @@ impl Default for Connection {
 }
 
 #[derive(Debug)]
-enum OperationError<'a> {
-    FtpError(FtpError),
-    IoError(std::io::Error),
-    SerdeError(serde_json::Error),
-    InvalidPathError(&'a str),
+enum OperationError {
+    Ftp(FtpError),
+    Io(std::io::Error),
+    Serde(serde_json::Error),
 }
-impl From<std::io::Error> for OperationError<'_> {
+impl From<std::io::Error> for OperationError {
     fn from(error: std::io::Error) -> Self {
-        OperationError::IoError(error)
+        OperationError::Io(error)
     }
 }
-impl From<FtpError> for OperationError<'_> {
+impl From<FtpError> for OperationError {
     fn from(error: FtpError) -> Self {
-        OperationError::FtpError(error)
+        OperationError::Ftp(error)
     }
 }
-impl From<serde_json::Error> for OperationError<'_> {
+impl From<serde_json::Error> for OperationError {
     fn from(error: serde_json::Error) -> Self {
-        OperationError::SerdeError(error)
+        OperationError::Serde(error)
     }
 }
 
 pub fn init() -> Result<(), Box<dyn Error>> {
-    let root_store = rustls::RootCertStore::from_iter(
-        webpki_roots::TLS_SERVER_ROOTS
-            .iter()
-            .cloned(),
-    );
+    let root_store =
+        rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
 
     let config = ClientConfig::builder()
         .with_root_certificates(root_store)
         .with_no_client_auth();
 
-    
     let mut buf: String = "".to_string();
     std::io::stdin().read_line(&mut buf)?;
     let connection_params: Connection = serde_json::from_str(&buf)?;
@@ -130,27 +209,37 @@ pub fn init() -> Result<(), Box<dyn Error>> {
         "{}:{}",
         connection_params.hostname, connection_params.port
     ))?;
-    ftp_stream.set_mode(if connection_params.passive { suppaftp::types::Mode::Passive } else { suppaftp::types::Mode::Active } );
+    ftp_stream.set_mode(if connection_params.passive {
+        suppaftp::types::Mode::Passive
+    } else {
+        suppaftp::types::Mode::Active
+    });
     if connection_params.tls {
-        eprintln!("Activating FTPS");
         ftp_stream = ftp_stream.into_secure(
             RustlsConnector::from(Arc::new(config)),
-            &connection_params.hostname
+            &connection_params.hostname,
         )?;
-        eprintln!("FTPS activated");
     }
     ftp_stream.login(connection_params.username, connection_params.password)?;
     ftp_stream.transfer_type(suppaftp::types::FileType::Binary)?;
+    println!(
+        "{}",
+        serde_json::to_string(&FtpResult::Generic { success: true }).unwrap()
+    );
 
     buf.clear();
-    while let Ok(n) = std::io::stdin().read_line(&mut buf) {
+    loop {
+        let Ok(n) = std::io::stdin().read_line(&mut buf) else {
+            let _ = ftp_stream.quit();
+            return Err("Couldn't read from input".into());
+        };
         if n == 0 {
             break;
         }
         match perform_operation(&mut ftp_stream, &buf) {
             Ok(t) => println!("{}", serde_json::to_string(&t).unwrap()),
             Err(e) => {
-                let err = get_ftp_error(e);
+                let err = FtpResult::from(e);
                 eprintln!("{:?}", err);
                 println!("{}", serde_json::to_string(&err).unwrap());
             }
@@ -161,36 +250,10 @@ pub fn init() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn get_ftp_error(e: OperationError) -> FtpResult {
-    match e {
-        OperationError::FtpError(e) => match e {
-            suppaftp::FtpError::ConnectionError(_e) => {
-                todo!();
-            },
-            suppaftp::FtpError::UnexpectedResponse(r) => {
-                /*let Ok(response) = std::str::from_utf8(&r.body) else {
-                    return FtpResult::Error {
-                        success: false,
-                        code: 1999,
-                        error: "Invalid UTF-8 in server response",
-                    };
-                };*/
-                FtpResult::Error {
-                    success: false,
-                    code: 1000 + r.status.code(),
-                    error: "Unexpected server response",
-                }
-            },
-            _ => todo!(),
-        },
-        OperationError::IoError(_) | OperationError::SerdeError(_) | OperationError::InvalidPathError(_) => todo!()
-    }
-}
-
 fn perform_operation<'a>(
     ftp: &'a mut RustlsFtpStream,
     buf: &'a str,
-) -> Result<FtpResult<'a>, OperationError<'a>> {
+) -> Result<FtpResult, OperationError> {
     let command: Command = serde_json::from_str(buf)?;
     match command {
         Command::NoOp {} => {
@@ -206,9 +269,11 @@ fn perform_operation<'a>(
                 None => match &path.file_name().unwrap().to_str() {
                     Some(p) => filename = p,
                     None => {
-                        return Err(OperationError::InvalidPathError(
-                            "Invalid UTF8 sequence in filename",
-                        ));
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Invalid UTF8 sequence in remote filename",
+                        )
+                        .into());
                     }
                 },
             }
@@ -218,15 +283,23 @@ fn perform_operation<'a>(
         Command::Download { local, remote } => {
             let path;
             if remote.ends_with("/") {
-                return Err(OperationError::InvalidPathError(
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::IsADirectory,
                     "Remote path is a directory",
-                ));
+                )
+                .into());
             }
             match local {
                 Some(p) => path = ftp_path(p)?,
                 None => match Path::new(remote).file_name().unwrap().to_str() {
                     Some(p) => path = ftp_path(Path::new(p))?,
-                    None => return Err(OperationError::InvalidPathError("Invalid remote path")),
+                    None => {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Invalid UTF8 sequence in remote filename",
+                        )
+                        .into());
+                    }
                 },
             }
             let mut file = File::create(&path)?;
@@ -270,15 +343,30 @@ fn perform_operation<'a>(
 fn ftp_path(path: &Path) -> Result<PathBuf, std::io::Error> {
     let base_path = Path::new("/home/nix/build/wp360-codesys-bridge-rs/");
     let complete_path = base_path.join(path);
+
+    if complete_path == base_path {
+        return Ok(complete_path);
+    }
+
     let Some(parent) = complete_path.parent() else {
-        return Err(std::io::Error::other("Invalid local path"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid local path",
+        ));
     };
     let Some(filename) = complete_path.file_name() else {
-        return Err(std::io::Error::other("Invalid local path"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid local path",
+        ));
     };
+
     let true_parent = parent.canonicalize()?;
     if !true_parent.starts_with(base_path) {
-        return Err(std::io::Error::other("Invalid local path"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidFilename,
+            "Local path not in base folder",
+        ));
     }
     let true_path = parent.join(filename);
     Ok(true_path)

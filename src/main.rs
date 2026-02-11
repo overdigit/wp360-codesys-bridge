@@ -21,6 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let wrong_arg_error = serde_json::to_string(&BridgeError { code: 1 })?;
 
     match args[1].as_str() {
+        // TODO: create a sensible error type for submodules to return and let the FTP module return that
         "ftp" => ftp::init(),
         _ => {
             eprintln!("{}", wrong_arg_error);
