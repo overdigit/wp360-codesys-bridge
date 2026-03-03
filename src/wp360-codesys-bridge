@@ -35,6 +35,40 @@ case "$1" in
     esac
     nmcli con up "$DEVICE"
     ;;
+  ntp_config_set)
+    NTP="$2"
+    SERVER="$3"
+    FALLBACK="$4"
+    case "$NTP" in
+      TRUE)
+        timedatectl set-ntp true
+        ;;
+      FALSE)
+        timedatectl set-ntp false
+        ;;
+    esac
+    case "$SERVER" in
+      "")
+      ;;
+      "-")
+        rm /etc/systemd/timesyncd.conf.d/server.conf
+        ;;
+      *)
+        echo "[Time]\nNTP=$SERVER" > /etc/systemd/timesyncd.conf.d/server.conf
+        ;;
+    esac
+    case "$FALLBACK" in
+      "")
+      ;;
+      "-")
+        rm /etc/systemd/timesyncd.conf.d/fallback.conf
+        ;;
+      *)
+        echo "[Time]\nFallbackNTP=$FALLBACK" > /etc/systemd/timesyncd.conf.d/fallback.conf
+        ;;
+    esac
+    systemctl reload systemd-timesyncd
+    ;;
   os_reboot)
     reboot
     ;;
