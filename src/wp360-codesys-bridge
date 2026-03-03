@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+set -e
+
 case "$1" in
   cpu_temp_read)
     cat /sys/class/thermal/thermal_zone0/temp
@@ -46,5 +48,9 @@ case "$1" in
     /usr/lib/wp360-codesys-bridge/wp360-codesys-bridge-rs "$@" < "$IN" > "$OUT" & disown
     echo "$IN"
     echo "$OUT"
+    ;;
+  *)
+    echo "No/invalid command"
+    exit 1
     ;;
 esac
