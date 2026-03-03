@@ -31,7 +31,7 @@ macro_rules! rtdebug {
 macro_rules! extern_wasm {
     (
         $(#[$extern_attr:meta])*
-        unsafe extern "C" {
+        extern "C" {
             $(
                 $(#[$func_attr:meta])*
                 $vis:vis fn $func_name:ident ( $($args:tt)* ) $(-> $ret:ty)?;
@@ -40,7 +40,7 @@ macro_rules! extern_wasm {
     ) => {
         $(
             #[cfg(not(target_family = "wasm"))]
-            #[allow(unused, reason = "dummy shim for non-wasm compilation, never invoked")]
+            #[allow(unused)]
             $vis unsafe fn $func_name($($args)*) $(-> $ret)? {
                 unreachable!();
             }
@@ -48,7 +48,7 @@ macro_rules! extern_wasm {
 
         #[cfg(target_family = "wasm")]
         $(#[$extern_attr])*
-        unsafe extern "C" {
+        extern "C" {
             $(
                 $(#[$func_attr])*
                 $vis fn $func_name($($args)*) $(-> $ret)?;
@@ -214,9 +214,9 @@ impl FutureState<'_> {
             // processing the future here anyway.
             me.cancel_inter_task_stream_read();
 
-            loop {
-                let mut context = Context::from_waker(&me.waker_clone);
+            let mut context = Context::from_waker(&me.waker_clone);
 
+            loop {
                 // On each turn of this loop reset the state to "polling"
                 // which clears out any pending wakeup if one was sent. This
                 // in theory helps minimize wakeups from previous iterations
@@ -255,12 +255,8 @@ impl FutureState<'_> {
                         assert!(!me.tasks.is_empty());
                         if me.waker.sleep_state.load(Ordering::Relaxed) == SLEEP_STATE_WOKEN {
                             if me.remaining_work() {
-                                let (event0, event1, event2) =
-                                    me.waitable_set.as_ref().unwrap().poll();
-                                if event0 != EVENT_NONE {
-                                    me.deliver_waitable_event(event1, event2);
-                                    continue;
-                                }
+                                let waitable = me.waitable_set.as_ref().unwrap().as_raw();
+                                break CallbackCode::Poll(waitable);
                             }
                             break CallbackCode::Yield;
                         }
@@ -348,24 +344,20 @@ unsafe extern "C" fn waitable_register(
 ) -> *mut c_void {
     let ptr = ptr.cast::<FutureState<'static>>();
     assert!(!ptr.is_null());
-    unsafe {
-        (*ptr).add_waitable(waitable);
-        match (*ptr).waitables.insert(waitable, (callback_ptr, callback)) {
-            Some((prev, _)) => prev,
-            None => ptr::null_mut(),
-        }
+    (*ptr).add_waitable(waitable);
+    match (*ptr).waitables.insert(waitable, (callback_ptr, callback)) {
+        Some((prev, _)) => prev,
+        None => ptr::null_mut(),
     }
 }
 
 unsafe extern "C" fn waitable_unregister(ptr: *mut c_void, waitable: u32) -> *mut c_void {
     let ptr = ptr.cast::<FutureState<'static>>();
     assert!(!ptr.is_null());
-    unsafe {
-        (*ptr).remove_waitable(waitable);
-        match (*ptr).waitables.remove(&waitable) {
-            Some((prev, _)) => prev,
-            None => ptr::null_mut(),
-        }
+    (*ptr).remove_waitable(waitable);
+    match (*ptr).waitables.remove(&waitable) {
+        Some((prev, _)) => prev,
+        None => ptr::null_mut(),
     }
 }
 
@@ -419,6 +411,7 @@ enum CallbackCode {
     Exit,
     Yield,
     Wait(u32),
+    Poll(u32),
 }
 
 impl CallbackCode {
@@ -427,6 +420,7 @@ impl CallbackCode {
             CallbackCode::Exit => 0,
             CallbackCode::Yield => 1,
             CallbackCode::Wait(waitable) => 2 | (waitable << 4),
+            CallbackCode::Poll(waitable) => 3 | (waitable << 4),
         }
     }
 }
@@ -548,7 +542,9 @@ pub fn block_on<T: 'static>(future: impl Future<Output = T>) -> T {
                 drop(state);
                 break result.unwrap();
             }
-            CallbackCode::Yield => event = state.waitable_set.as_ref().unwrap().poll(),
+            CallbackCode::Yield | CallbackCode::Poll(_) => {
+                event = state.waitable_set.as_ref().unwrap().poll()
+            }
             CallbackCode::Wait(_) => event = state.waitable_set.as_ref().unwrap().wait(),
         }
     }
@@ -577,7 +573,7 @@ pub fn block_on<T: 'static>(future: impl Future<Output = T>) -> T {
 pub fn yield_blocking() -> bool {
     extern_wasm! {
         #[link(wasm_import_module = "$root")]
-        unsafe extern "C" {
+        extern "C" {
             #[link_name = "[thread-yield]"]
             fn yield_() -> bool;
         }
@@ -626,11 +622,29 @@ pub async fn yield_async() {
     Yield::default().await;
 }
 
+/// Call the `backpressure.set` canonical built-in function.
+///
+/// When `enabled` is `true`, this tells the host to defer any new calls to this
+/// component instance until further notice (i.e. until `backpressure.set` is
+/// called again with `enabled` set to `false`).
+#[deprecated = "use backpressure_{inc,dec} instead"]
+pub fn backpressure_set(enabled: bool) {
+    extern_wasm! {
+        #[link(wasm_import_module = "$root")]
+        extern "C" {
+            #[link_name = "[backpressure-set]"]
+            fn backpressure_set(_: i32);
+        }
+    }
+
+    unsafe { backpressure_set(if enabled { 1 } else { 0 }) }
+}
+
 /// Call the `backpressure.inc` canonical built-in function.
 pub fn backpressure_inc() {
     extern_wasm! {
         #[link(wasm_import_module = "$root")]
-        unsafe extern "C" {
+        extern "C" {
             #[link_name = "[backpressure-inc]"]
             fn backpressure_inc();
         }
@@ -643,7 +657,7 @@ pub fn backpressure_inc() {
 pub fn backpressure_dec() {
     extern_wasm! {
         #[link(wasm_import_module = "$root")]
-        unsafe extern "C" {
+        extern "C" {
             #[link_name = "[backpressure-dec]"]
             fn backpressure_dec();
         }
@@ -655,7 +669,7 @@ pub fn backpressure_dec() {
 fn context_get() -> *mut u8 {
     extern_wasm! {
         #[link(wasm_import_module = "$root")]
-        unsafe extern "C" {
+        extern "C" {
             #[link_name = "[context-get-0]"]
             fn get() -> *mut u8;
         }
@@ -667,7 +681,7 @@ fn context_get() -> *mut u8 {
 unsafe fn context_set(value: *mut u8) {
     extern_wasm! {
         #[link(wasm_import_module = "$root")]
-        unsafe extern "C" {
+        extern "C" {
             #[link_name = "[context-set-0]"]
             fn set(value: *mut u8);
         }
@@ -697,7 +711,7 @@ impl Drop for TaskCancelOnDrop {
     fn drop(&mut self) {
         extern_wasm! {
             #[link(wasm_import_module = "[export]$root")]
-            unsafe extern "C" {
+            extern "C" {
                 #[link_name = "[task-cancel]"]
                 fn cancel();
             }

@@ -13,7 +13,7 @@
 edition = "2021"
 rust-version = "1.82"
 name = "windows-core"
-version = "0.62.2"
+version = "0.62.1"
 build = false
 autolib = false
 autobins = false
@@ -21,7 +21,7 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Core type support for COM and Windows"
-readme = "readme.md"
+readme = "README.md"
 categories = ["os::windows-apis"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/microsoft/windows-rs"
@@ -42,23 +42,23 @@ name = "windows_core"
 path = "src/lib.rs"
 
 [dependencies.windows-implement]
-version = "0.60.2"
+version = "0.60.1"
 default-features = false
 
 [dependencies.windows-interface]
-version = "0.59.3"
+version = "0.59.2"
 default-features = false
 
 [dependencies.windows-link]
-version = "0.2.1"
+version = "0.2.0"
 default-features = false
 
 [dependencies.windows-result]
-version = "0.4.1"
+version = "0.4.0"
 default-features = false
 
 [dependencies.windows-strings]
-version = "0.5.1"
+version = "0.5.0"
 default-features = false
 
 [lints.rust]
