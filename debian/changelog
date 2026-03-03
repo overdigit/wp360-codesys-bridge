@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.1.2-1) trixie; urgency=low
+
+  * Better error handling.
+
+ -- Overdigit <info@overdigit.com>  Tue, 03 Mar 2026 15:09:09 +0100
+
 wp360-codesys-bridge (0.1.1-1) trixie; urgency=low
 
   * Fixed typo.
