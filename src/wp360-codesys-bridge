@@ -17,9 +17,9 @@ case "$1" in
         ;;
       FALSE)
         nmcli con mod "$DEVICE" ipv4.method manual
-        [[ -n "$ADDRESS" ]] && nmcli con mod "$DEVICE" ipv4.addresses "$ADDRESS"
-        [[ -n "$GATEWAY" ]] && nmcli con mod "$DEVICE" ipv4.gateway   "$GATEWAY"
-        [[ -n "$DNS"     ]] && nmcli con mod "$DEVICE" ipv4.dns       "$DNS"
+        [ -n "$ADDRESS" ] && nmcli con mod "$DEVICE" ipv4.addresses "$ADDRESS"
+        [ -n "$GATEWAY" ] && nmcli con mod "$DEVICE" ipv4.gateway   "$GATEWAY"
+        [ -n "$DNS"     ] && nmcli con mod "$DEVICE" ipv4.dns       "$DNS"
         nmcli con up "$DEVICE"
         ;;
     esac
