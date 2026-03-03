@@ -23,10 +23,10 @@ case "$1" in
         nmcli con mod "$DEVICE" ipv4.method auto ipv4.addresses "$ADDRESS" ipv4.gateway "$GATEWAY" ipv4.dns "$DNS"
         ;;
       FALSE)
-        nmcli con mod "$DEVICE" ipv4.method manual
         [ -n "$ADDRESS" ] && nmcli con mod "$DEVICE" ipv4.addresses "$ADDRESS"
         [ -n "$GATEWAY" ] && nmcli con mod "$DEVICE" ipv4.gateway   "$GATEWAY"
         [ -n "$DNS"     ] && nmcli con mod "$DEVICE" ipv4.dns       "$DNS"
+        nmcli con mod "$DEVICE" ipv4.method manual || exit 1
         ;;
       *)
         echo "ip_config_set: DHCP must be TRUE or FALSE"
