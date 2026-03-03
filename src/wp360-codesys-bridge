@@ -1,0 +1,50 @@
+#!/usr/bin/env sh
+
+case "$1" in
+  cpu_temp_read)
+    cat /sys/class/thermal/thermal_zone0/temp
+    ;;
+  ip_config_set)
+    DEVICE="$2"
+    DHCP="$3"
+    ADDRESS="$4"
+    GATEWAY="$5"
+    DNS="$6"
+
+    case "$DHCP" in
+      TRUE)
+        nmcli con mod "$DEVICE" ipv4.method auto ipv4.addresses "$ADDRESS" ipv4.gateway "$GATEWAY" ipv4.dns "$DNS"
+        ;;
+      FALSE)
+        nmcli con mod "$DEVICE" ipv4.method manual
+        [[ -n "$ADDRESS" ]] && nmcli con mod "$DEVICE" ipv4.addresses "$ADDRESS"
+        [[ -n "$GATEWAY" ]] && nmcli con mod "$DEVICE" ipv4.gateway   "$GATEWAY"
+        [[ -n "$DNS"     ]] && nmcli con mod "$DEVICE" ipv4.dns       "$DNS"
+        nmcli con up "$DEVICE"
+        ;;
+    esac
+    ;;
+  os_reboot)
+    reboot
+    ;;
+  rts_restart)
+    systemctl restart codesyscontrol
+    ;;
+  timezone_get)
+    timedatectl show --property=Timezone
+    ;;
+  timezone_set)
+    timedatectl --no-ask-password set-timezone "$2"
+    ;;
+  watchdog_write)
+    echo "$2" > /sys/kernel/wp360-pmuc/watchdog
+    ;;
+  ftp)
+    IN=$(mktemp -u /run/user/1000/codesys-bridge.XXXXXXXX)
+    OUT=$(mktemp -u /run/user/1000/codesys-bridge.XXXXXXXX)
+    mkfifo "$IN" "$OUT"
+    /usr/lib/wp360-codesys-bridge/wp360-codesys-bridge-rs "$@" < "$IN" > "$OUT" & disown
+    echo "$IN"
+    echo "$OUT"
+    ;;
+esac
