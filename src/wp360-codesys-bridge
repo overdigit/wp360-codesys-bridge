@@ -7,6 +7,11 @@ case "$1" in
     cat /sys/class/thermal/thermal_zone0/temp
     ;;
   ip_config_set)
+    if [ "$#" -ne "6" ]
+    then
+      echo "ip_config_set: 6 arguments required, $# provided"
+      exit 1
+    fi
     DEVICE="$2"
     DHCP="$3"
     ADDRESS="$4"
@@ -22,9 +27,13 @@ case "$1" in
         [ -n "$ADDRESS" ] && nmcli con mod "$DEVICE" ipv4.addresses "$ADDRESS"
         [ -n "$GATEWAY" ] && nmcli con mod "$DEVICE" ipv4.gateway   "$GATEWAY"
         [ -n "$DNS"     ] && nmcli con mod "$DEVICE" ipv4.dns       "$DNS"
-        nmcli con up "$DEVICE"
         ;;
+      *)
+        echo "ip_config_set: DHCP must be TRUE or FALSE"
+	exit 1
+	;;
     esac
+    nmcli con up "$DEVICE"
     ;;
   os_reboot)
     reboot
@@ -50,7 +59,7 @@ case "$1" in
     echo "$OUT"
     ;;
   *)
-    echo "No/invalid command"
+    echo "No command or invalid command"
     exit 1
     ;;
 esac
