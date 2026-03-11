@@ -67,7 +67,7 @@ case "$1" in
         echo "[Time]\nFallbackNTP=$FALLBACK" > /etc/systemd/timesyncd.conf.d/fallback.conf
         ;;
     esac
-    systemctl reload systemd-timesyncd
+    systemctl restart systemd-timesyncd
     ;;
   os_reboot)
     reboot
