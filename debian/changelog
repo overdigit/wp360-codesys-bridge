@@ -1,3 +1,10 @@
+wp360-codesys-bridge (0.2.0-1) trixie; urgency=low
+
+  * Restart timesyncd after editing NTP settings.
+  * Remove FTP from the helper script.
+
+ -- Overdigit <info@overdigit.com>  Wed, 11 Mar 2026 10:30:34 +0100
+
 wp360-codesys-bridge (0.1.5-1) trixie; urgency=low
 
   * Add ntp_config_set.
