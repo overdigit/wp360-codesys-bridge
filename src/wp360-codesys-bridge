@@ -84,14 +84,6 @@ case "$1" in
   watchdog_write)
     echo "$2" > /sys/kernel/wp360-pmuc/watchdog
     ;;
-  ftp)
-    IN=$(mktemp -u /run/user/1000/codesys-bridge.XXXXXXXX)
-    OUT=$(mktemp -u /run/user/1000/codesys-bridge.XXXXXXXX)
-    mkfifo "$IN" "$OUT"
-    /usr/lib/wp360-codesys-bridge/wp360-codesys-bridge-rs "$@" < "$IN" > "$OUT" & disown
-    echo "$IN"
-    echo "$OUT"
-    ;;
   *)
     echo "No command or invalid command"
     exit 1
