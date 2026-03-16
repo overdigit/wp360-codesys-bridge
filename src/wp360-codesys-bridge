@@ -99,6 +99,27 @@ case "$1" in
     esac
     nmcli con up "$DEVICE"
     ;;
+  ntp_config_get)
+    #timedatectl show-timesync -p SystemNTPServers -p FallbackNTPServers -p ServerName
+    NTP=$(timedatectl show -P NTP)
+    case "$NTP" in
+      yes)
+        NTP=TRUE
+        ;;
+      no)
+        NTP=FALSE
+        ;;
+    esac
+    if [ -f /etc/systemd/timesyncd.conf.d/server.conf ]
+    then
+      Servers=$(grep -o -P '(?<=NTP=)(.+)' /etc/systemd/timesyncd.conf.d/server.conf)
+    fi
+    if [ -f /etc/systemd/timesyncd.conf.d/fallback.conf ]
+    then
+      Fallback=$(grep -o -P '(?<=FallbackNTP=)(.+)' /etc/systemd/timesyncd.conf.d/fallback.conf)
+    fi
+    echo "$NTP\r\n$Servers\r\n$Fallback"
+    ;;
   ntp_config_set)
     NTP="$2"
     SERVER="$3"
