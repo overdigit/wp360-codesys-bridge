@@ -141,7 +141,7 @@ case "$1" in
       "")
       ;;
       "-")
-        rm /etc/systemd/timesyncd.conf.d/server.conf
+        rm -f /etc/systemd/timesyncd.conf.d/server.conf
         ;;
       *)
         echo "[Time]\nNTP=$SERVER" > /etc/systemd/timesyncd.conf.d/server.conf
@@ -151,7 +151,7 @@ case "$1" in
       "")
       ;;
       "-")
-        rm /etc/systemd/timesyncd.conf.d/fallback.conf
+        rm -f /etc/systemd/timesyncd.conf.d/fallback.conf
         ;;
       *)
         echo "[Time]\nFallbackNTP=$FALLBACK" > /etc/systemd/timesyncd.conf.d/fallback.conf
