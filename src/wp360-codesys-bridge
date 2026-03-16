@@ -94,7 +94,7 @@ case "$1" in
         ;;
       *)
         echo "ip_config_set: DHCP must be TRUE or FALSE"
-	exit 1
+	exit 2
 	;;
     esac
     nmcli con up "$DEVICE"
