@@ -121,6 +121,11 @@ case "$1" in
     echo "$NTP\r\n$Servers\r\n$Fallback"
     ;;
   ntp_config_set)
+    if [ "$#" -ne "4" ]
+    then
+      echo "ntp_config_set: 4 arguments required, $# provided"
+      exit 1
+    fi
     NTP="$2"
     SERVER="$3"
     FALLBACK="$4"
