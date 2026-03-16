@@ -6,6 +6,70 @@ case "$1" in
   cpu_temp_read)
     cat /sys/class/thermal/thermal_zone0/temp
     ;;
+  ip_config_get)
+    if [ "$#" -ne "2" ]
+    then
+      echo "ip_config_get: 2 arguments required, $# provided"
+      exit 1
+    fi
+    DEVICE="$2"
+    dhcp="$(           nmcli -g ipv4.method con show "$DEVICE" )"
+    case "$dhcp" in
+      auto)
+        dhcp=TRUE
+        ;;
+      manual)
+        dhcp=FALSE
+        ;;
+    esac
+    address="$(        nmcli -g IP4.ADDRESS con show "$DEVICE"    | sed 's/ | / /g' )"
+    address_manual="$( nmcli -g ipv4.addresses con show "$DEVICE" | sed 's/,/ /g'   )"
+    gateway="$(        nmcli -g IP4.GATEWAY con show "$DEVICE"    | sed 's/ | / /g' )"
+    dns="$(            nmcli -g IP4.DNS con show "$DEVICE"        | sed 's/ | / /g' )"
+    dns_manual="$(     nmcli -g ipv4.dns con show "$DEVICE"       | sed 's/,/ /g'   )"
+    for addr1 in $address
+    do
+      is_dhcp=true
+      for addr2 in $address_manual
+      do
+        if [ "$addr1" = "$addr2" ]
+        then
+          is_dhcp=false
+        fi
+      done
+      if [ "$is_dhcp" = "true" ]
+      then
+        if [ -z "$address_dhcp" ]
+        then
+          address_dhcp="$addr1"
+        else
+          address_dhcp="$address_dhcp $addr1"
+        fi
+      fi
+    done
+    for dns1 in $dns
+    do
+      is_dhcp=true
+      for dns2 in $dns_manual
+      do
+        if [ "$dns1" = "$dns2" ]
+        then
+          is_dhcp=false
+        fi
+      done
+      if [ "$is_dhcp" = "true" ]
+      then
+        if [ -z "$dns_dhcp" ]
+        then
+          dns_dhcp="$dns1"
+        else
+          dns_dhcp="$dns_dhcp $dns1"
+        fi
+      fi
+    done
+
+    echo "$dhcp\r\n$address_manual\r\n$address_dhcp\r\n$gateway\r\n$dns_manual\r\n$dns_dhcp"
+    ;;
   ip_config_set)
     if [ "$#" -ne "6" ]
     then
