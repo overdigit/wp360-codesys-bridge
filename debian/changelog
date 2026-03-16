@@ -1,3 +1,13 @@
+wp360-codesys-bridge (0.3.0-1) trixie; urgency=low
+
+  * Add ip_config_get.
+  * Add ntp_config_get.
+  * Change return code for ip_config_get in case of invalid DHCP parameter.
+  * Add argument number guard for ntp_config_set.
+  * Prevent script abortion when resetting already default NTP servers.
+
+ -- Overdigit <info@overdigit.com>  Mon, 16 Mar 2026 17:41:18 +0100
+
 wp360-codesys-bridge (0.2.0-1) trixie; urgency=low
 
   * Restart timesyncd after editing NTP settings.
