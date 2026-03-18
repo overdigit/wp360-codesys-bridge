@@ -75,7 +75,7 @@ case "$1" in
       fi
     done
 
-    echo "$dhcp\r\n$address_manual\r\n$address_dhcp\r\n$gateway\r\n$dns_manual\r\n$dns_dhcp"
+    echo "$dhcp\n$address_manual\n$address_dhcp\n$gateway\n$dns_manual\n$dns_dhcp"
     ;;
   ip_config_set)
     if [ "$#" -ne "6" ]
@@ -125,7 +125,7 @@ case "$1" in
     then
       Fallback=$(grep -o -P '(?<=FallbackNTP=)(.+)' /etc/systemd/timesyncd.conf.d/fallback.conf)
     fi
-    echo "$NTP\r\n$Servers\r\n$Fallback"
+    echo "$NTP\n$Servers\n$Fallback"
     ;;
   ntp_config_set)
     if [ "$#" -ne "4" ]
@@ -173,7 +173,7 @@ case "$1" in
     systemctl restart codesyscontrol
     ;;
   timezone_get)
-    timedatectl show --property=Timezone
+    timedatectl show -P Timezone
     ;;
   timezone_set)
     timedatectl --no-ask-password set-timezone "$2"
