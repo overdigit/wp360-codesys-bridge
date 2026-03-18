@@ -1,3 +1,11 @@
+wp360-codesys-bridge (0.3.1-1) trixie; urgency=low
+
+  * Added mac_address_get.
+  * Added hostname_get, hostname_set.
+  * Updated outpput format for ip_config_get, ntp_config_get, timezone_get.
+
+ -- Overdigit <info@overdigit.com>  Wed, 18 Mar 2026 16:45:06 +0100
+
 wp360-codesys-bridge (0.3.0-1) trixie; urgency=low
 
   * Add ip_config_get.
