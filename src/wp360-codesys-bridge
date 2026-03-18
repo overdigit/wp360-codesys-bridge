@@ -106,6 +106,14 @@ case "$1" in
     esac
     nmcli con up "$DEVICE"
     ;;
+  mac_address_get)
+    if [ "$#" -ne "2" ]
+    then
+      echo "mac_address_get: 2 arguments required, $# provided"
+      exit 1
+    fi
+    nmcli -e n -g GENERAL.HWADDR dev show "$2"
+    ;;
   ntp_config_get)
     #timedatectl show-timesync -p SystemNTPServers -p FallbackNTPServers -p ServerName
     NTP=$(timedatectl show -P NTP)
