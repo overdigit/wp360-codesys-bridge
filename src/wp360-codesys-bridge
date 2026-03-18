@@ -29,11 +29,11 @@ case "$1" in
         dhcp=FALSE
         ;;
     esac
-    address="$(        nmcli -g IP4.ADDRESS con show "$DEVICE"    | sed 's/ | / /g' )"
+    address="$(        nmcli -g IP4.ADDRESS    con show "$DEVICE" | sed 's/ | / /g' )"
     address_manual="$( nmcli -g ipv4.addresses con show "$DEVICE" | sed 's/,/ /g'   )"
-    gateway="$(        nmcli -g IP4.GATEWAY con show "$DEVICE"    | sed 's/ | / /g' )"
-    dns="$(            nmcli -g IP4.DNS con show "$DEVICE"        | sed 's/ | / /g' )"
-    dns_manual="$(     nmcli -g ipv4.dns con show "$DEVICE"       | sed 's/,/ /g'   )"
+    gateway="$(        nmcli -g IP4.GATEWAY    con show "$DEVICE" | sed 's/ | / /g' )"
+    dns="$(            nmcli -g IP4.DNS        con show "$DEVICE" | sed 's/ | / /g' )"
+    dns_manual="$(     nmcli -g ipv4.dns       con show "$DEVICE" | sed 's/,/ /g'   )"
     for addr1 in $address
     do
       is_dhcp=true
