@@ -6,6 +6,13 @@ case "$1" in
   cpu_temp_read)
     cat /sys/class/thermal/thermal_zone0/temp
     ;;
+  hostname_get)
+    hostname
+    ;;
+  hostname_set)
+    hostnamectl hostname "$2"
+    sed -E -i "s/127.0.1.1\t\t.+/127.0.1.1\t\t$2/" /etc/hosts
+    ;;
   ip_config_get)
     if [ "$#" -ne "2" ]
     then
