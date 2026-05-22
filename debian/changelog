@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.4.0-1) trixie; urgency=low
+
+  * Add emergency stop switch at CODESYS bootup.
+
+ -- Overdigit <info@overdigit.com>  Fri, 22 May 2026 12:10:16 +0200
+
 wp360-codesys-bridge (0.3.1-1) trixie; urgency=low
 
   * Added mac_address_get.
