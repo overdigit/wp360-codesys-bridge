@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+if [ "$(gpioget --numeric -lc 0 6)" = "1" ]
+then
+    echo STOP > /var/opt/codesyscontrolapi/runstop.switch
+else
+    echo RUN >  /var/opt/codesyscontrolapi/runstop.switch
+fi
