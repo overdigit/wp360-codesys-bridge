@@ -144,14 +144,6 @@ case "$1" in
     NTP="$2"
     SERVER="$3"
     FALLBACK="$4"
-    case "$NTP" in
-      TRUE)
-        timedatectl set-ntp true
-        ;;
-      FALSE)
-        timedatectl set-ntp false
-        ;;
-    esac
     case "$SERVER" in
       "")
       ;;
@@ -172,7 +164,15 @@ case "$1" in
         echo "[Time]\nFallbackNTP=$FALLBACK" > /etc/systemd/timesyncd.conf.d/fallback.conf
         ;;
     esac
-    systemctl restart systemd-timesyncd
+    case "$NTP" in
+      TRUE)
+        timedatectl set-ntp true
+        systemctl restart systemd-timesyncd
+        ;;
+      FALSE)
+        timedatectl set-ntp false
+        ;;
+    esac
     ;;
   os_reboot)
     reboot
