@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.4.1-1) trixie; urgency=low
+
+  * Fix bug preventing NTP from being disabled.
+
+ -- Overdigit <info@overdigit.com>  Mon, 15 Jun 2026 15:18:06 +0200
+
 wp360-codesys-bridge (0.4.0-1) trixie; urgency=low
 
   * Add emergency stop switch at CODESYS bootup.
