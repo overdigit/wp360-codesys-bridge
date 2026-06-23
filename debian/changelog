@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.4.2-1) trixie; urgency=low
+
+  * Add internal cpu_get_serial command.
+
+ -- Overdigit <info@overdigit.com>  Tue, 23 Jun 2026 11:35:04 +0200
+
 wp360-codesys-bridge (0.4.1-1) trixie; urgency=low
 
   * Fix bug preventing NTP from being disabled.
