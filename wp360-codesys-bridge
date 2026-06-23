@@ -3,6 +3,9 @@
 set -e
 
 case "$1" in
+  cpu_serial_get)
+    grep Serial /proc/cpuinfo | sed -E 's/Serial\s+:\s+//'
+    ;;
   cpu_temp_read)
     cat /sys/class/thermal/thermal_zone0/temp
     ;;
