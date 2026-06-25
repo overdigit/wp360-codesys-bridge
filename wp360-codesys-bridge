@@ -9,6 +9,27 @@ case "$1" in
   cpu_temp_read)
     cat /sys/class/thermal/thermal_zone0/temp
     ;;
+  fan_test)
+    case "$2" in
+      init)
+        systemctl stop wp360-fan-ctrl
+        echo 90 > /sys/kernel/wp360-pmuc/fan_voltage
+        gpioset -c 0 -t 0 26=0
+        gpioset -c 0 -t 0 27=0
+        ;;
+      1)
+        gpioset -c 0 -t 0 26=1
+        gpioset -c 0 -t 0 27=0
+        ;;
+      2)
+        gpioset -c 0 -t 0 26=0
+        gpioset -c 0 -t 0 27=1
+        ;;
+      stop)
+        systemctl start wp360-fan-ctrl
+        ;;
+    esac
+    ;;
   hostname_get)
     hostname
     ;;
