@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.4.3-1) trixie; urgency=low
+
+  * Add internal fan_test command.
+
+ -- Overdigit <info@overdigit.com>  Thu, 25 Jun 2026 13:10:08 +0200
+
 wp360-codesys-bridge (0.4.2-1) trixie; urgency=low
 
   * Add internal cpu_get_serial command.
