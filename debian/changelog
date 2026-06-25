@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.4.4-1) trixie; urgency=low
+
+  * Add internal rtc_check command.
+
+ -- Overdigit <info@overdigit.com>  Thu, 25 Jun 2026 17:40:26 +0200
+
 wp360-codesys-bridge (0.4.3-1) trixie; urgency=low
 
   * Add internal fan_test command.
