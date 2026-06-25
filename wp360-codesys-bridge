@@ -201,6 +201,9 @@ case "$1" in
   os_reboot)
     reboot
     ;;
+  rtc_check)
+    [ -c /dev/rtc ] && echo "true" || echo "false"
+    ;;
   rts_restart)
     systemctl restart codesyscontrol
     ;;
