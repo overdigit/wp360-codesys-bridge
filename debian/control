@@ -13,5 +13,5 @@ Package: wp360-codesys-bridge
 Version: 0.1.0
 Architecture: any
 Maintainer: Overdigit <info@overdigit.com>
-Depends: ${misc:Depends}
+Depends: ${misc:Depends} wp360-codesys-bridge-rs
 Description: Bridge software to extend Codesys capabilities fully utilizing the underlying Linux environment.

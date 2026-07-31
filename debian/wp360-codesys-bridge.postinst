@@ -1,0 +1,37 @@
+#!/bin/bash
+
+cfg_path="/etc/codesyscontrol/CODESYSControl.cfg"
+defaults_path="/etc/default/codesyscontrol"
+
+update_cfg() {
+  if [[ ! -f "$cfg_path" ]]
+  then
+    exit 0
+  fi
+  if ! grep -q '/etc/codesyscontrol/CODESYSControl_WP360.cfg' "$cfg_path"
+  then
+    last=$(grep ^FileReference "$cfg_path" | sort -g -t. -k2 | tail -n 1 | grep -E -o '[0-9]+')
+    sed -i -E 's;FileReference.'"$last"'=(.+);FileReference.'"$last"'=\1\nFileReference.'"$((last+1))"'=/etc/codesyscontrol/CODESYSControl_WP360.cfg;' "$cfg_path"
+  fi
+}
+
+update_defaults() {
+  if [[ ! -f "$defaults_path" ]]
+  then
+    exit 0
+  fi
+  sed -i 's/^USER_BINARY=codesyscontrol$/USER_BINARY=root/' "$defaults_path"
+  sed -i 's/^GROUP_BINARY=codesyscontrol$/GROUP_BINARY=root/' "$defaults_path"
+}
+
+case $1 in
+  configure)
+    update_cfg
+    update_defaults
+    ;;
+  triggered)
+    update_cfg
+    update_defaults
+    ;;
+esac
+
