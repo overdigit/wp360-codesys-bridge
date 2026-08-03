@@ -22,6 +22,10 @@ update_defaults() {
   fi
   sed -i 's/^USER_BINARY=codesyscontrol$/USER_BINARY=root/' "$defaults_path"
   sed -i 's/^GROUP_BINARY=codesyscontrol$/GROUP_BINARY=root/' "$defaults_path"
+  if ! grep -q '/var/opt/codesyscontrolapi' "$defaults_path"
+  then
+    echo -e '\nDIRECTORIES="$DIRECTORIES /var/opt/codesyscontrolapi"' >> "$defaults_path"
+  fi
 }
 
 case $1 in
