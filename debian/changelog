@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.5.1-1) trixie; urgency=low
+
+  * Run smtp and ftp daemons under the same user as codesyscontrol.
+
+ -- Overdigit <info@overdigit.com>  Mon, 03 Aug 2026 15:10:34 +0200
+
 wp360-codesys-bridge (0.5.0-1) trixie; urgency=low
 
   * Run CODESYS as root waiting for v3.5.22.40.
