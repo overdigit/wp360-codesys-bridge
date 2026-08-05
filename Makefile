@@ -3,6 +3,7 @@ prefix = /usr
 all: wp360-codesys-bridge
 
 install: all
+	install -d $(DESTDIR)/var/lib/CodeMeter/CmAct_ewf
 	install -D wp360-codesys-bridge $(DESTDIR)$(prefix)/bin/wp360-codesys-bridge
 	install -D wp360-codesys-stopswitch $(DESTDIR)$(prefix)/libexec/wp360-codesys-bridge/wp360-codesys-stopswitch
 	install -D 10-codesys-root.conf $(DESTDIR)$(prefix)/lib/systemd/system/codesyscontrol.service.d/10-codesys-root.conf

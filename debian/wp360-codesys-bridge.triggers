@@ -1,2 +1,3 @@
 interest /etc/codesyscontrol/CODESYSControl.cfg
 interest /etc/default/codesyscontrol
+interest /etc/wibu/CodeMeter/Server.ini

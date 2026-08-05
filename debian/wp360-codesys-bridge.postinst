@@ -2,23 +2,26 @@
 
 cfg_path="/etc/codesyscontrol/CODESYSControl.cfg"
 defaults_path="/etc/default/codesyscontrol"
+codemeter_path="/etc/wibu/CodeMeter/Server.ini"
+container_path="/var/lib/CodeMeter/CmAct_ewf"
 
 update_cfg() {
   if [[ ! -f "$cfg_path" ]]
   then
-    exit 0
+    return 0
   fi
   if ! grep -q '/etc/codesyscontrol/CODESYSControl_WP360.cfg' "$cfg_path"
   then
     last=$(grep ^FileReference "$cfg_path" | sort -g -t. -k2 | tail -n 1 | grep -E -o '[0-9]+')
     sed -i -E 's;FileReference.'"$last"'=(.+);FileReference.'"$last"'=\1\nFileReference.'"$((last+1))"'=/etc/codesyscontrol/CODESYSControl_WP360.cfg;' "$cfg_path"
   fi
+  sed -i '/^InitFileLicense/d' "$cfg_path"
 }
 
 update_defaults() {
   if [[ ! -f "$defaults_path" ]]
   then
-    exit 0
+    return 0
   fi
   sed -i 's/^USER_BINARY=codesyscontrol$/USER_BINARY=root/' "$defaults_path"
   sed -i 's/^GROUP_BINARY=codesyscontrol$/GROUP_BINARY=root/' "$defaults_path"
@@ -28,14 +31,38 @@ update_defaults() {
   fi
 }
 
+update_codemeter() {
+  if [[ ! -f "$codemeter_path" ]]
+  then
+    return 0
+  fi
+  if grep -q '^CmActPath=' "$codemeter_path"
+  then
+    sed -i "s,^CmActPath=,CmActPath=${container_path}," "$codemeter_path"
+  else
+    sed -i "s,\[General\],[General]\nCmActPath=${container_path}," "$codemeter_path"
+  fi
+
+  if grep -q '^EnableCmActWriteFilterHandling=' "$codemeter_path"
+  then
+    sed -i 's/^EnableCmActWriteFilterHandling=/EnableCmActWriteFilterHandling=1' "$codemeter_path"
+  else
+    sed -i 's/\[General\]/[General]\nEnableCmActWriteFilterHandling=1/' "$codemeter_path"
+  fi
+
+  chown daemon:daemon "$container_path"
+}
+
 case $1 in
   configure)
     update_cfg
     update_defaults
+    update_codemeter
     ;;
   triggered)
     update_cfg
     update_defaults
+    update_codemeter
     ;;
 esac
 
