@@ -18,18 +18,18 @@ update_cfg() {
   sed -i '/^InitFileLicense/d' "$cfg_path"
 }
 
-update_defaults() {
-  if [[ ! -f "$defaults_path" ]]
-  then
-    return 0
-  fi
-  sed -i 's/^USER_BINARY=codesyscontrol$/USER_BINARY=root/' "$defaults_path"
-  sed -i 's/^GROUP_BINARY=codesyscontrol$/GROUP_BINARY=root/' "$defaults_path"
-  if ! grep -q '/var/opt/codesyscontrolapi' "$defaults_path"
-  then
-    echo -e '\nDIRECTORIES="$DIRECTORIES /var/opt/codesyscontrolapi"' >> "$defaults_path"
-  fi
-}
+#update_defaults() {
+#  if [[ ! -f "$defaults_path" ]]
+#  then
+#    return 0
+#  fi
+#  sed -i 's/^USER_BINARY=codesyscontrol$/USER_BINARY=root/' "$defaults_path"
+#  sed -i 's/^GROUP_BINARY=codesyscontrol$/GROUP_BINARY=root/' "$defaults_path"
+#  if ! grep -q '/var/opt/codesyscontrolapi' "$defaults_path"
+#  then
+#    echo -e '\nDIRECTORIES="$DIRECTORIES /var/opt/codesyscontrolapi"' >> "$defaults_path"
+#  fi
+#}
 
 update_codemeter() {
   if [[ ! -f "$codemeter_path" ]]
@@ -45,7 +45,7 @@ update_codemeter() {
 
   if grep -q '^EnableCmActWriteFilterHandling=' "$codemeter_path"
   then
-    sed -i 's/^EnableCmActWriteFilterHandling=/EnableCmActWriteFilterHandling=1' "$codemeter_path"
+    sed -i 's/^EnableCmActWriteFilterHandling=/EnableCmActWriteFilterHandling=1/' "$codemeter_path"
   else
     sed -i 's/\[General\]/[General]\nEnableCmActWriteFilterHandling=1/' "$codemeter_path"
   fi
@@ -56,12 +56,10 @@ update_codemeter() {
 case $1 in
   configure)
     update_cfg
-    update_defaults
     update_codemeter
     ;;
   triggered)
     update_cfg
-    update_defaults
     update_codemeter
     ;;
 esac
