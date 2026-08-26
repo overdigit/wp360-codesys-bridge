@@ -1,3 +1,9 @@
+wp360-codesys-bridge (0.5.3-1) trixie; urgency=low
+
+  * Stop trying to run bridges as root by default.
+
+ -- Overdigit <info@overdigit.com>  Wed, 26 Aug 2026 10:26:01 +0200
+
 wp360-codesys-bridge (0.5.2-1) trixie; urgency=low
 
   * Run CodeMeter and CODESYS in EWF license mode.
